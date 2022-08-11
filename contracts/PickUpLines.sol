@@ -11,7 +11,7 @@ contract PickUpLines {
     mapping(address => bool) hasWrote;
     mapping(address=>bool) hasLiked;
     mapping(address=>uint256)writerLikes;
-    struct PickUpLine {
+    struct PickUpLine {  
         address writer;
         string line; 
         uint256 timestamp;
