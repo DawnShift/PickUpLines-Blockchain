@@ -4,9 +4,10 @@ pragma solidity ^0.8.0;
 import "hardhat/console.sol";
 contract PickUpLines {
     event NewPickUpLine(address indexed from, uint256 timestamp, string line); 
-    event UpdateLikes(address indexed from, uint256 timestamp, address indexed writer);
-    uint256 private seed;
-    uint256 totalLines;
+    event UpdateLikes(address indexed from, uint256 timestamp, address indexed writer,uint256 likes); 
+    event TransferMoney(address indexed from, uint256 timestamp, address indexed writer);
+
+    uint256 private seed; 
     address[] winners;
     mapping(address => bool) hasWrote;
     mapping(address=>bool) hasLiked;
@@ -14,7 +15,7 @@ contract PickUpLines {
     struct PickUpLine {  
         address writer;
         string line; 
-        uint256 timestamp;
+        uint256 timestamp; 
     }
     PickUpLine[] pickuplines;
 
@@ -30,26 +31,11 @@ contract PickUpLines {
             revert(
                 "It seems you've posted a line already. We don't do repeats when it comes to pick up lines!"
             );
-        }
-        //Adding a new Pickup Line to our blockchain.
-        totalLines += 1;
+        } 
         pickuplines.push(PickUpLine(msg.sender, _line,block.timestamp));
         hasWrote[msg.sender] = true;
         writerLikes[msg.sender] = 0;
-        emit NewPickUpLine(msg.sender, block.timestamp, _line);
-
-        // //Reward 10% of sender with 0.0001 ether.
-        // seed = (block.difficulty + block.timestamp + seed) % 100;
-        // if (seed <= 10) {
-        //     winners.push(msg.sender);
-        //     uint256 prizeAmount = 0.0001 ether;
-        //     require(
-        //         prizeAmount <= address(this).balance,
-        //         "The contract has insufficient ETH balance."
-        //     );
-        //     (bool success, ) = (msg.sender).call{value: prizeAmount}("");
-        //     require(success, "Failed to withdraw ETH from the contract");
-        // }
+        emit NewPickUpLine(msg.sender, block.timestamp, _line); 
     }
 
      function addLikes(address pickUpLineWriter) public
@@ -60,19 +46,49 @@ contract PickUpLines {
             );
         }
          writerLikes[pickUpLineWriter] +=1 ; 
-        emit UpdateLikes(msg.sender,block.timestamp,pickUpLineWriter);
+        uint256 likes = writerLikes[pickUpLineWriter];
+        hasLiked[msg.sender]=true;
+        emit UpdateLikes(msg.sender,block.timestamp,pickUpLineWriter, likes);
      } 
 
-    function getAllLines() public view returns (PickUpLine[] memory) {
+     function checkIfUserpickedUp() public view returns (bool) 
+     {
+        bool hasUserWrote =false;
+       if (hasWrote[msg.sender]) {
+           hasUserWrote = true;
+        }
+        return hasUserWrote;
+     } 
+
+     function checkIfUserLiked() public view returns (bool)
+     {
+            bool hasUerLiked =false;
+         if (hasLiked[msg.sender]) {
+           hasUerLiked = true;
+        }
+        return hasUerLiked;
+     }
+
+    function getAllLines() public view returns (PickUpLine[] memory) { 
         return pickuplines;
     }
 
-    function getTotalLines() public view returns (uint256) {
-        console.log("We have %s total PickUpLines.", totalLines);
-        return totalLines;
+    function getLinesLike() public view returns (address[] memory,uint256[] memory)
+    {
+        uint256[] memory totalLikes =new uint256[](pickuplines.length);
+                address[] memory writer =new address[](pickuplines.length);
+        for(uint i=0;i<pickuplines.length;i++)
+        {
+            writer[i] = pickuplines[i].writer;
+           totalLikes[i] = writerLikes[pickuplines[i].writer];
+        }
+        return(writer,totalLikes);
     }
 
-    function getTheWinner() private view returns (address[] memory) {
-        return winners;
-    }
+    function transferPrize(address winner) public
+    {
+       address payable winnerAddress = payable(winner);
+       winnerAddress.transfer(1 ether);
+       emit TransferMoney(msg.sender,block.timestamp,winner);
+    }  
 }
